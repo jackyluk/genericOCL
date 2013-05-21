@@ -12,7 +12,9 @@
  CONTENTS:
 
  host/             | OpenCL API implementation
+
  device/           | device application
+
  intel/MonteCarlo  | Intel Monte Carlo simulation for the European stock option pricing
 
 -----------------------------------------------

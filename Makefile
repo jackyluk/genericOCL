@@ -1,32 +1,38 @@
-CFLAGS = -W -Wall -g -I.
-CXXFLAGS = -W -Wall -g -I.
+ARCH = $(shell getconf LONG_BIT)
+ARCHPATH_32 = x86
+ARCHPATH_64 = x86_64
+ARCHPATH = $(ARCHPATH_$(ARCH))
+
+CFLAGS = -W -Wall -g -Ihost/include
+CXXFLAGS = -W -Wall -g -Ihost/include
 CC = gcc
-ALL = device helloworld addition matrix
+ALL = host device helloworld addition matrix
 
 all: $(ALL)
 
 
-helloworld: helloworld.o host/libfpgaOCL.so
-	g++ -Lhost/ -o helloworld helloworld.o -lfpgaOCL
+helloworld: helloworld.o
+	g++ -Lhost/build/lib/$(ARCHPATH) -o helloworld helloworld.o -lOpenCL
 
-addition: addition.o host/libfpgaOCL.so
-	g++ -Lhost/ -o addition addition.o -lfpgaOCL
+addition: addition.o
+	g++ -Lhost/build/lib/$(ARCHPATH) -o addition addition.o -lOpenCL
 
-matrix: matrix.o host/libfpgaOCL.so
-	g++ -Lhost/ -o matrix matrix.o -lfpgaOCL
+matrix: matrix.o
+	g++ -Lhost/build/lib/$(ARCHPATH) -o matrix matrix.o -lOpenCL
 
 device: device/device
 
 device/%:
 	$(MAKE) -C device/
 
-host/%:
+host: host/build
+host/%: 
 	$(MAKE) -C host/
 
 %.o: %.cc
-	g++ $(CXXFLAGS) -c -Lhost/ -o $@ $<
+	g++ $(CXXFLAGS) -c -L$(NOVELCLSDKROOT)/lib/$(ARCHPATH) -o $@ $<
 
 clean:
-	rm *.o helloworld addition matrix
+	@rm -f *.o helloworld addition matrix
 	$(MAKE) -C device/ clean
 	$(MAKE) -C host/ clean

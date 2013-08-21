@@ -11,12 +11,12 @@
 #include <queue>
 #include <deque>
 
-#define COMPUTE_UNIT_ARRAY_SIZE 5
+#define COMPUTE_UNIT_ARRAY_SIZE 128
 
 class TPScheduler: public IScheduler{
     int globalWS[3];
-    ComputeUnit *cu_array[COMPUTE_UNIT_ARRAY_SIZE];
     std::queue<ComputeUnit *> free_cu_array;
+    std::queue<ComputeUnit *> done_cu_array;
     pthread_mutex_t queue_mx;
     char *data;
 public:

@@ -1,16 +1,15 @@
 /*!****************************************************************************
- * @file cl_program.c OpenCL program implementation
- * @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
- *****************************************************************************/
+* @file cl_program.c OpenCL program implementation
+* @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
+*****************************************************************************/
 #include "debug.h"
 #include <CL/opencl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "cl_defs.h"
 #include "dev_interface.h"
-
-void cl_program_sanitizeBuildOptions(const char *options, char *safeOptions);
 
 cl_program clCreateProgramWithSource(
 cl_context context,
@@ -29,6 +28,8 @@ cl_int *errcode_ret)
         return NULL;
     }
     prog->refcount = 1; /* implicit retain */
+    prog->buildStatus = CL_BUILD_NONE;
+    prog->buildOptions = NULL;
     prog->source.count = count;
     prog->source.strings = calloc(sizeof(char **), count);
     if(prog->source.strings == NULL){
@@ -87,13 +88,35 @@ cl_program clCreateProgramWithBinary (  cl_context context,
         const unsigned char **binaries,
         cl_int *binary_status,
         cl_int *errcode_ret){
-            
+    cl_program prog;        
     DEBUG("Entering %s\n", __func__);
+    if( (prog = (cl_program)malloc(sizeof(struct _cl_program))) == NULL){
+        if(binary_status) *binary_status = CL_OUT_OF_HOST_MEMORY;
+        if(errcode_ret) *errcode_ret = CL_OUT_OF_HOST_MEMORY;
+        return NULL;
+    }
+    prog->refcount = 1; /* implicit retain */
+    prog->buildStatus = CL_BUILD_NONE;
+    prog->buildOptions = NULL;
+    prog->source.count = 0;
+    prog->source.strings = NULL;
     
-//     prog->hasBinary = CL_TRUE;
-//     prog->createdWithBinary = CL_TRUE;
-    return CL_OUT_OF_HOST_MEMORY;
-    
+    FILE *binaryFile = fopen("program.o", "wb+");
+    if(binaryFile != NULL){
+        fwrite(binaries[0], lengths[0], 1, binaryFile);
+        prog->binarySize = lengths[0];
+        fclose(binaryFile);
+    }else{
+        free(prog);
+        if(binary_status) *binary_status = CL_OUT_OF_HOST_MEMORY;
+        if(errcode_ret) *errcode_ret = CL_OUT_OF_HOST_MEMORY;
+        return NULL;
+    }
+    if(binary_status) *binary_status = CL_SUCCESS;
+    if(errcode_ret) *errcode_ret = CL_SUCCESS;
+    prog->hasBinary = CL_TRUE;
+    prog->createdWithBinary = CL_TRUE;
+    return prog;
 }
 
 
@@ -130,6 +153,9 @@ cl_program program)
             free(program->source.lengths);
             free(program->source.strings);
         }
+        if(program->buildOptions){
+            free(program->buildOptions);
+        }
         free(program);
     }
     return CL_SUCCESS;
@@ -145,26 +171,34 @@ void *user_data)
 {
     char cmd[256];
     DEBUG("clBuildProgram called\n");
-    if(program == NULL)
+    if(program == NULL){
+        DEBUG("Warning: Program is NULL");
         return CL_INVALID_PROGRAM;
+    }
+    program->buildStatus = CL_BUILD_IN_PROGRESS;
     
     if(program->createdWithBinary == CL_TRUE){
+        program->buildStatus = CL_BUILD_SUCCESS;
         return CL_SUCCESS;
     }
-    char safeOptions[512];
-    
+    if(program->buildOptions){
+        free(program->buildOptions);
+    }
+    program->buildOptions = strdup(options);
+    program->buildOptionsLen = strlen(options);
     DEBUG("clBuildProgram: buildoptions %s\n", options);
-    cl_program_sanitizeBuildOptions(options, safeOptions);
-    DEBUG("clBuildProgram: safe buildoptions %s\n", safeOptions);
+//     cl_program_sanitizeBuildOptions(options, safeOptions);
+    DEBUG("clBuildProgram: safe buildoptions %s\n", options);
     FILE *optionsFile = fopen("tmp.options", "wb+");
     if (optionsFile != NULL){
         fwrite("CLFLAGS=\"", 9, 1, optionsFile);
-        fwrite(safeOptions, strlen(safeOptions), 1, optionsFile);
+        fwrite(options, strlen(options), 1, optionsFile);
         fwrite("\"", 1, 1, optionsFile);
         fclose(optionsFile);
         optionsFile = NULL;
     }else{
         DEBUG("%s: build options store failed.\n", __func__);
+        program->buildStatus = CL_BUILD_ERROR;
         return CL_BUILD_PROGRAM_FAILURE;
     }
     
@@ -178,18 +212,30 @@ void *user_data)
         fclose(srcFile);
         
         DEBUG("%s: performing program build\n", __func__);
-        snprintf(cmd, 256, " ./buildprogram.sh tmp.cl "); 
-
+        snprintf(cmd, 256, "$NOVELCLSDKROOT/scripts/buildprogram.sh tmp.cl "); 
+        DEBUG("RUN: %s", cmd);
         if(system(cmd)){
             DEBUG("%s: program build error\n", __func__);
+            program->buildStatus = CL_BUILD_ERROR;
             return CL_BUILD_PROGRAM_FAILURE;
         }
         DEBUG("%s: program build success\n", __func__);
+        FILE * binaryFile = fopen("program.o", "rb");
+        if(binaryFile != NULL){
+            fseek(binaryFile, 0L, SEEK_END);
+            program->binarySize = ftell(binaryFile);
+            fclose(binaryFile);
+        }else{
+            program->buildStatus = CL_BUILD_ERROR;
+            return CL_BUILD_PROGRAM_FAILURE;
+        }
         program->hasBinary = CL_TRUE;
+        program->buildStatus = CL_BUILD_SUCCESS;
         return CL_SUCCESS;
 
     }else{
         DEBUG("%s: Failed\n", __func__);
+        program->buildStatus = CL_BUILD_ERROR;
         return CL_BUILD_PROGRAM_FAILURE;
     }
 }
@@ -202,7 +248,7 @@ cl_int clGetProgramInfo (cl_program program,
     DEBUG("Entering %s\n", __func__);
     if(program == NULL)
         return CL_INVALID_PROGRAM;
-  
+
     switch(param_name){
         case CL_PROGRAM_REFERENCE_COUNT :
             param_value = (void *)program->refcount;
@@ -225,14 +271,43 @@ cl_int clGetProgramInfo (cl_program program,
             param_value = (void *)program->context->devices;
             return CL_SUCCESS;
             
+        case CL_PROGRAM_BINARY_SIZES:
+            if(param_value != NULL){
+                if(program->buildStatus == CL_BUILD_SUCCESS){
+                    *(size_t *)param_value = program->binarySize;
+                    if(param_value_size_ret) *param_value_size_ret = sizeof(size_t);
+                    return CL_SUCCESS;
+                }else{
+                    return CL_BUILD_PROGRAM_FAILURE;
+                }
+            }
+            break;
+        case CL_PROGRAM_BINARIES:
+            if(param_value != NULL){
+                if(program->buildStatus == CL_BUILD_SUCCESS){
+                    FILE * binaryFile = fopen("program.o", "rb");
+                    if(binaryFile != NULL){
+                        int byteRead;
+                        byteRead = fread(((void **)param_value)[0], 1, program->binarySize, binaryFile);
+                        fclose(binaryFile);
+                        if(byteRead == program->binarySize){
+                            if(param_value_size_ret) *param_value_size_ret = program->binarySize;
+                            return CL_SUCCESS;
+                        }else{
+                            return CL_OUT_OF_RESOURCES;
+                        }
+                    }
+                }
+            }
+            break;
+            
         default:
             return CL_INVALID_VALUE;
     }
-  
-  return CL_OUT_OF_RESOURCES;
+
+return CL_OUT_OF_RESOURCES;
 }
 
-//TODO
 cl_int clGetProgramBuildInfo (  cl_program  program,
                                 cl_device_id  device,
                                 cl_program_build_info  param_name,
@@ -240,34 +315,44 @@ cl_int clGetProgramBuildInfo (  cl_program  program,
                                 void  *param_value,
                                 size_t  *param_value_size_ret){
     DEBUG("Entering %s\n", __func__);
+    
+    switch(param_name){
+        case CL_PROGRAM_BUILD_STATUS:
+            DEBUG("%s: CL_PROGRAM_BUILD_STATUS\n", __func__);
+            if(param_value != NULL){
+                *(cl_build_status *)param_value = program->buildStatus;
+                *param_value_size_ret = sizeof(cl_build_status);
+                return CL_SUCCESS;
+            }else{
+                DEBUG("%s: Warning: param_value is NULL!\n", __func__);
+            }
+            break;
+            
+        case CL_PROGRAM_BUILD_OPTIONS:
+            DEBUG("%s: CL_PROGRAM_BUILD_OPTIONS\n", __func__);
+            if(param_value != NULL){
+                if(program->buildOptions != NULL){
+                    memcpy((char *)param_value, program->buildOptions, program->buildOptionsLen);
+                    if(param_value_size_ret)*param_value_size_ret = program->buildOptionsLen;
+                }else{
+                    if(param_value_size_ret)*param_value_size_ret = 0;
+                }
+                return CL_SUCCESS;
+            }else{
+                DEBUG("%s: Warning: param_value is NULL!\n", __func__);
+            }
+            break;
+        case CL_PROGRAM_BUILD_LOG:
+            if(param_value_size_ret)*param_value_size_ret = 0;
+            return CL_SUCCESS;
+        default:
+            return CL_INVALID_VALUE;
+    }
+    
+    
     DEBUG("%s: NOT YET IMPLEMENTED\n", __func__);
     
     return CL_OUT_OF_HOST_MEMORY;
-}
-
-void cl_program_sanitizeBuildOptions(const char *options, char *safeOptions){
-    char *pos;
-    char *spos;
-    int first = 1;
-    pos = options;
-    spos = safeOptions;
-    
-    while(*pos){
-        if(*pos == ' ' || first){
-            first = 0;
-            while(*pos && *pos == ' ') pos++; //skip spaces
-            *spos++ = ' ';
-            if(0 == memcmp(pos, "-D", 2)){
-                continue;
-            }
-            while(*pos && *pos != ' ') pos++; //skip the option
-        }else{
-            *spos = *pos;
-            spos++;
-            pos++;
-        }
-    }
-    *spos = 0;
 }
 
 

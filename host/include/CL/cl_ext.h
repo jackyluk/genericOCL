@@ -1,25 +1,25 @@
 /*******************************************************************************
- * Copyright (c) 2008-2010 The Khronos Group Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and/or associated documentation files (the
- * "Materials"), to deal in the Materials without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Materials, and to
- * permit persons to whom the Materials are furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Materials.
- *
- * THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
- ******************************************************************************/
+* Copyright (c) 2008-2010 The Khronos Group Inc.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and/or associated documentation files (the
+* "Materials"), to deal in the Materials without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Materials, and to
+* permit persons to whom the Materials are furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be included
+* in all copies or substantial portions of the Materials.
+*
+* THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+******************************************************************************/
 
 /* $Revision: 11928 $ on $Date: 2010-07-13 09:04:56 -0700 (Tue, 13 Jul 2010) $ */
 
@@ -34,10 +34,10 @@ extern "C" {
 #endif
 
 #ifdef __APPLE__
-	#include <OpenCL/cl.h>
+    #include <OpenCL/cl.h>
     #include <AvailabilityMacros.h>
 #else
-	#include <CL/cl.h>
+    #include <CL/cl.h>
 #endif
 
 /* cl_khr_fp64 extension - no extension #define since it has no functions  */
@@ -47,22 +47,22 @@ extern "C" {
 #define CL_DEVICE_HALF_FP_CONFIG                    0x1033
 
 /* Memory object destruction
- *
- * Apple extension for use to manage externally allocated buffers used with cl_mem objects with CL_MEM_USE_HOST_PTR
- *
- * Registers a user callback function that will be called when the memory object is deleted and its resources 
- * freed. Each call to clSetMemObjectCallbackFn registers the specified user callback function on a callback 
- * stack associated with memobj. The registered user callback functions are called in the reverse order in 
- * which they were registered. The user callback functions are called and then the memory object is deleted 
- * and its resources freed. This provides a mechanism for the application (and libraries) using memobj to be 
- * notified when the memory referenced by host_ptr, specified when the memory object is created and used as 
- * the storage bits for the memory object, can be reused or freed.
- *
- * The application may not call CL api's with the cl_mem object passed to the pfn_notify.
- *
- * Please check for the "cl_APPLE_SetMemObjectDestructor" extension using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)
- * before using.
- */
+*
+* Apple extension for use to manage externally allocated buffers used with cl_mem objects with CL_MEM_USE_HOST_PTR
+*
+* Registers a user callback function that will be called when the memory object is deleted and its resources 
+* freed. Each call to clSetMemObjectCallbackFn registers the specified user callback function on a callback 
+* stack associated with memobj. The registered user callback functions are called in the reverse order in 
+* which they were registered. The user callback functions are called and then the memory object is deleted 
+* and its resources freed. This provides a mechanism for the application (and libraries) using memobj to be 
+* notified when the memory referenced by host_ptr, specified when the memory object is created and used as 
+* the storage bits for the memory object, can be reused or freed.
+*
+* The application may not call CL api's with the cl_mem object passed to the pfn_notify.
+*
+* Please check for the "cl_APPLE_SetMemObjectDestructor" extension using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)
+* before using.
+*/
 #define cl_APPLE_SetMemObjectDestructor 1
 cl_int	CL_API_ENTRY clSetMemObjectDestructorAPPLE(  cl_mem /* memobj */, 
                                         void (* /*pfn_notify*/)( cl_mem /* memobj */, void* /*user_data*/), 
@@ -70,13 +70,13 @@ cl_int	CL_API_ENTRY clSetMemObjectDestructorAPPLE(  cl_mem /* memobj */,
 
 
 /* Context Logging Functions
- *
- * The next three convenience functions are intended to be used as the pfn_notify parameter to clCreateContext().
- * Please check for the "cl_APPLE_ContextLoggingFunctions" extension using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)
- * before using.
- *
- * clLogMessagesToSystemLog fowards on all log messages to the Apple System Logger 
- */
+*
+* The next three convenience functions are intended to be used as the pfn_notify parameter to clCreateContext().
+* Please check for the "cl_APPLE_ContextLoggingFunctions" extension using clGetDeviceInfo(CL_DEVICE_EXTENSIONS)
+* before using.
+*
+* clLogMessagesToSystemLog fowards on all log messages to the Apple System Logger 
+*/
 #define cl_APPLE_ContextLoggingFunctions 1
 extern void CL_API_ENTRY clLogMessagesToSystemLogAPPLE(  const char * /* errstr */, 
                                             const void * /* private_info */, 
@@ -85,15 +85,15 @@ extern void CL_API_ENTRY clLogMessagesToSystemLogAPPLE(  const char * /* errstr 
 
 /* clLogMessagesToStdout sends all log messages to the file descriptor stdout */
 extern void CL_API_ENTRY clLogMessagesToStdoutAPPLE(   const char * /* errstr */, 
-                                          const void * /* private_info */, 
-                                          size_t       /* cb */, 
-                                          void *       /* user_data */ )    CL_EXT_SUFFIX__VERSION_1_0;
+                                        const void * /* private_info */, 
+                                        size_t       /* cb */, 
+                                        void *       /* user_data */ )    CL_EXT_SUFFIX__VERSION_1_0;
 
 /* clLogMessagesToStderr sends all log messages to the file descriptor stderr */
 extern void CL_API_ENTRY clLogMessagesToStderrAPPLE(   const char * /* errstr */, 
-                                          const void * /* private_info */, 
-                                          size_t       /* cb */, 
-                                          void *       /* user_data */ )    CL_EXT_SUFFIX__VERSION_1_0;
+                                        const void * /* private_info */, 
+                                        size_t       /* cb */, 
+                                        void *       /* user_data */ )    CL_EXT_SUFFIX__VERSION_1_0;
 
 
 /************************ 
@@ -109,8 +109,8 @@ extern void CL_API_ENTRY clLogMessagesToStderrAPPLE(   const char * /* errstr */
 
 extern CL_API_ENTRY cl_int CL_API_CALL
 clIcdGetPlatformIDsKHR(cl_uint          /* num_entries */,
-                       cl_platform_id * /* platforms */,
-                       cl_uint *        /* num_platforms */);
+                    cl_platform_id * /* platforms */,
+                    cl_uint *        /* num_platforms */);
 
 typedef CL_API_ENTRY cl_int (CL_API_CALL *clIcdGetPlatformIDsKHR_fn)(
     cl_uint          /* num_entries */,
@@ -138,7 +138,7 @@ typedef CL_API_ENTRY cl_int (CL_API_CALL *clIcdGetPlatformIDsKHR_fn)(
 
 
 #ifdef CL_VERSION_1_1
-   /***********************************
+/***********************************
     * cl_ext_device_fission extension *
     ***********************************/
     #define cl_ext_device_fission   1

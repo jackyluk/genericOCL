@@ -1,7 +1,7 @@
 /*!****************************************************************************
- * @file cl_queue.c OpenCL queue implementation
- * @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
- *****************************************************************************/
+* @file cl_queue.c OpenCL queue implementation
+* @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
+*****************************************************************************/
 
 #include "debug.h"
 #include <CL/opencl.h>
@@ -174,7 +174,7 @@ cl_int clFinish(cl_command_queue command_queue){
             usleep(1000);
         }
     }
- 
+
     return CL_SUCCESS;
 }
 
@@ -269,7 +269,7 @@ void queue_dispatchCommand(cl_command_queue command_queue, QueueCommand *command
         
         case CL_COMMAND_NDRANGE_KERNEL:
             DEBUG("%s: Submitting NDRange Kernel.\n", __func__);
-            dispatchNDRangeKernel(fd, command);
+            dispatchNDRangeKernel(command_queue->device, command);
             DEBUG("%s: Submitting NDRange Kernel. Return\n", __func__);
             break;
             
@@ -297,8 +297,8 @@ void queue_dispatchCommand(cl_command_queue command_queue, QueueCommand *command
             }
             break;
         case CL_CUSTOM_COMMAND_BARRIER:
-             DEBUG("%s: Barrier command.\n", __func__);
-             break;
+            DEBUG("%s: Barrier command.\n", __func__);
+            break;
         case CL_COMMAND_TASK:
         case CL_COMMAND_NATIVE_KERNEL:
         case CL_COMMAND_COPY_BUFFER:
@@ -324,64 +324,107 @@ void queue_dispatchCommand(cl_command_queue command_queue, QueueCommand *command
     time(&(command->completionTime));
 }
 
-void dispatchNDRangeKernel(int fd, QueueCommand *command){
-    char buf[1024];
-    char cmd[256];
-    char* args;
-    char* name;
+void dispatchNDRangeKernel(cl_device_id device, QueueCommand *command){
     DEBUG("%s: Entered \n", __func__);
     ND_Kernel_Cmd_Params *params = command->payload;
+    int fd = device->fd_ctrl;
+    
+    if(!setGlobalWorkSize(fd, params->globalWorkSize.globalX, params->globalWorkSize.globalY, params->globalWorkSize.globalZ)){
+        DEBUG("Error setting Kernel arguments.\n");
+        time(&(command->completionTime));
+        command->eventStatus = CL_COMPLETE;
+        return;
+    }
+    
+    if(!setKernelArguments(params->kernel)){
+        DEBUG("Error setting Kernel arguments.\n");
+        time(&(command->completionTime));
+        command->eventStatus = CL_COMPLETE;
+        return;
+    }
+    
+    if(params->kernel->isNew == CL_TRUE){
+        if(!compileKernel(params->kernel->func_name, params->globalWorkSize.globalX, params->globalWorkSize.globalY, params->globalWorkSize.globalZ)){
+            DEBUG("Error compiling kernel \n");
+            time(&(command->completionTime));
+            command->eventStatus = CL_COMPLETE;
+            return;
+        }
+        if(!transferKernel(fd)){
+            DEBUG("Error transferring kernel.\n");
+            time(&(command->completionTime));
+            command->eventStatus = CL_COMPLETE;
+            return;
+        }
+        params->kernel->isNew = CL_FALSE;
+    }
+    
+    if(!sendExecuteKernel(fd)){
+        DEBUG("Error starting kernel.\n");
+        time(&(command->completionTime));
+        command->eventStatus = CL_COMPLETE;
+        return;
+    }
+    // TODO Set Error
+    time(&(command->completionTime));
+    command->eventStatus = CL_COMPLETE;
+    return;
+}
+
+int setGlobalWorkSize(int fd, int globalX, int globalY, int globalZ){
+        /*! Set Global size */
+    char buf[256];
     CommPacket_t *globalWorkSize = (CommPacket_t *)buf;
     CommPacket_t *rsp = (CommPacket_t *)buf;
-    
-    /* set kernel args on the device */
-    args = get_kernel_args(params->kernel);
-    dev_set_kernel_args(args);
-    free(args);
-    
-    /*! Set Global size */
     globalWorkSize->version = MORACL_PROTOCOL_VERSION;
     globalWorkSize->cmdId = GLOBAL_WORK_SIZE;
     globalWorkSize->length = htons(4 + 12);
-    globalWorkSize->payload.globalWorkSize.globalX = htonl(params->globalWorkSize.globalX);
-    globalWorkSize->payload.globalWorkSize.globalY = htonl(params->globalWorkSize.globalY);
-    globalWorkSize->payload.globalWorkSize.globalZ = htonl(params->globalWorkSize.globalZ);
+    globalWorkSize->payload.globalWorkSize.globalX = htonl(globalX);
+    globalWorkSize->payload.globalWorkSize.globalY = htonl(globalY);
+    globalWorkSize->payload.globalWorkSize.globalZ = htonl(globalZ);
     dev_write(fd, buf, (4+12));
     dev_read(fd, buf, 4);
     if(rsp->cmdId == CTRL_ACK){
         DEBUG("%s: Global work size set.\n", __func__);
+        return 1;
     }else if(rsp->cmdId != CTRL_NAK){
         DEBUG("%s: Device response protocol error.\n", __func__);
-        time(&(command->completionTime));
-        command->eventStatus = CL_COMPLETE;
-        return;
-//         return CL_INVALID_GLOBAL_WORK_SIZE;
+        return 0;
     }else{
         DEBUG("%s: Device error while setting global work size.\n", __func__);
-        time(&(command->completionTime));
-        command->eventStatus = CL_COMPLETE;
-        return;
-//         return CL_INVALID_GLOBAL_WORK_SIZE;
+        return 0;
     }
-    
+}
+
+int setKernelArguments(cl_kernel kernel){
+    char* args;
+    /* set kernel args on the device */
+    args = get_kernel_args(kernel);
+    dev_set_kernel_args(args);
+    free(args);
+    return 1;
+}
+
+int compileKernel(char * func_name, int globalX, int globalY, int globalZ){
     /*! Compile kernel*/
-    name = params->kernel->func_name;
+    char cmd[256];
 
     DEBUG("clEnqueueNDRangeKernel: performing kernel compilation\n");
     /* create kernel wrapper from kernelargs and compile the kernel */
-    snprintf(cmd, 256, "%s ./createwrapper.py %s %d %d && ./compilekernel.sh %s.cl", PYTHON, name, params->globalWorkSize.globalX, params->globalWorkSize.globalY, name); 
+    snprintf(cmd, 256, "%s $NOVELCLSDKROOT/scripts/createwrapper.py %s %d %d && $NOVELCLSDKROOT/scripts/compilekernel.sh %s.cl", PYTHON, func_name, globalX, globalY, func_name); 
 
     if(system(cmd)){
         // TODO Set error
         DEBUG("clEnqueueNDRangeKernel: kernel compilation failed\n");
-        time(&(command->completionTime));
-        command->eventStatus = CL_COMPLETE;
-        return;
+        return 0;
     }
+    return 1;
+}
 
-    DEBUG("clEnqueueNDRangeKernel: telling device to start processing\n");
-    
+int transferKernel(int fd){
     /* send kernel to device */
+    char buf[1024];
+    CommPacket_t *rsp = (CommPacket_t *)buf;
     FILE *kfd = fopen("kernel.so", "rb");
     int kernelLoaded = 0;
     
@@ -433,20 +476,17 @@ void dispatchNDRangeKernel(int fd, QueueCommand *command){
                 }
             }
         }
-          
+        
         fclose (kfd);
     }else{
-      DEBUG("%s: Host error while transferring kernel.\n", __func__);
+    DEBUG("%s: Host error while transferring kernel.\n", __func__);
     }
-    
-    if(!kernelLoaded){
-        // TODO Set Error
-        time(&(command->completionTime));
-        command->eventStatus = CL_COMPLETE;
-        return;
-//       return CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST;
-    }
-    
+    return kernelLoaded;
+}
+
+int sendExecuteKernel(int fd){
+    char buf[1024];
+    CommPacket_t *rsp = (CommPacket_t *)buf;
     CommPacket_t *processCmd = (CommPacket_t *)buf;
     /*! Prefill some parts of the start command message */
     processCmd->version = MORACL_PROTOCOL_VERSION;
@@ -454,21 +494,21 @@ void dispatchNDRangeKernel(int fd, QueueCommand *command){
     processCmd->length = htons(4);
     dev_write(fd, processCmd, 4);
     dev_read(fd, buf, 4);
-    time(&(command->completionTime));
-    command->eventStatus = CL_COMPLETE;
-    return;
-//     *event = clCreateUserEvent(0, &err);
-//     if(err != CL_SUCCESS)
-//         return CL_OUT_OF_HOST_MEMORY;
-    
+    if(rsp->cmdId == CTRL_ACK){
+        DEBUG("%s: Kernel Executing.\n", __func__);
+        return 1;
+    }else{
+        DEBUG("%s: Device error while starting kernel.\n", __func__);
+        return 0;
+    }
 }
 
 
 /*! 
- * @brief Add a command to a command queue
- * @param command_queue Command queue object
- * @return Pointer to the newly queued command object. NULL if unsuccessful.
- */
+* @brief Add a command to a command queue
+* @param command_queue Command queue object
+* @return Pointer to the newly queued command object. NULL if unsuccessful.
+*/
 QueueCommand* queue_add(cl_command_queue command_queue){
     QueueCommand *newCmd;
     
@@ -498,14 +538,15 @@ QueueCommand* queue_add(cl_command_queue command_queue){
         command_queue->currentEvent = newCmd;
         DEBUG("%s: Next event -> %p \n", __func__, command_queue->currentEvent);
     }
+    DEBUG("%s: New event at %p \n", __func__, newCmd);
     return newCmd;
 }
 
 /*! 
- * @brief Get pointer to the command at the head of a command queue
- * @param command_queue Command queue object
- * @return Pointer to the newly queued command object. NULL if unsuccessful.
- */
+* @brief Get pointer to the command at the head of a command queue
+* @param command_queue Command queue object
+* @return Pointer to the newly queued command object. NULL if unsuccessful.
+*/
 QueueCommand* queue_head(cl_command_queue command_queue){
     QueueCommand *head;
     
@@ -532,11 +573,11 @@ QueueCommand* queue_head(cl_command_queue command_queue){
 
 
 /*! 
- * @brief Remove a command from a queue
- * @param command_queue Command queue object
+* @brief Remove a command from a queue
+* @param command_queue Command queue object
 * @param cmd Pointer to command
- * @return Pointer to the newly queued command object. NULL if unsuccessful.
- */
+* @return Pointer to the newly queued command object. NULL if unsuccessful.
+*/
 void queue_remove(cl_command_queue command_queue, QueueCommand *cmd){
     QueueCommand *tmp;
     QueueCommand **prev;
@@ -549,10 +590,12 @@ void queue_remove(cl_command_queue command_queue, QueueCommand *cmd){
     while(*prev){
         if(cmd == *prev){
             *prev = (*prev)->next;
-            prev = &((*prev)->next);
             free(cmd->payload);
             free(cmd);
+            return;
         }
+        //Next element
+        prev = &((*prev)->next);
     }
 
     return;

@@ -33,6 +33,7 @@ public:
     ~ComputeUnit();
     void set_kernel(char *lib_name);
     void run_kernel(int x, int y, int z);
+    void join();
 };
 
 #endif //COMPUTEUNIT_HPP

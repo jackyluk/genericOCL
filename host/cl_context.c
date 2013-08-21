@@ -1,7 +1,7 @@
 /*!****************************************************************************
- * @file cl_context.c OpenCL context implementation
- * @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
- *****************************************************************************/
+* @file cl_context.c OpenCL context implementation
+* @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
+*****************************************************************************/
 
 #include "debug.h"
 #include <CL/opencl.h>
@@ -11,14 +11,14 @@
 #include "cl_defs.h"
 
 /*!
- * @brief Creates an OpenCL context.
- * @param properties Specifies a list of context property names and their corresponding values. Each property name is immediately followed by the corresponding desired value. The list is terminated with 0. properties can be NULL in which case the platform that is selected is implementation-defined. 
- * @param num_devices The number of devices specified in the devices argument.
- * @param devices A pointer to a list of unique devices returned by clGetDeviceIDs for a platform.
- * @param pfn_notify A callback function that can be registered by the application. This callback function will be used by the OpenCL implementation to report information on errors that occur in this context. 
- * @param user_data Passed as the user_data argument when pfn_notify is called. user_data can be NULL.
- * @param errcode_ret Returns an appropriate error code. If errcode_ret is NULL, no error code is returned.
- */
+* @brief Creates an OpenCL context.
+* @param properties Specifies a list of context property names and their corresponding values. Each property name is immediately followed by the corresponding desired value. The list is terminated with 0. properties can be NULL in which case the platform that is selected is implementation-defined. 
+* @param num_devices The number of devices specified in the devices argument.
+* @param devices A pointer to a list of unique devices returned by clGetDeviceIDs for a platform.
+* @param pfn_notify A callback function that can be registered by the application. This callback function will be used by the OpenCL implementation to report information on errors that occur in this context. 
+* @param user_data Passed as the user_data argument when pfn_notify is called. user_data can be NULL.
+* @param errcode_ret Returns an appropriate error code. If errcode_ret is NULL, no error code is returned.
+*/
 
 cl_context clCreateContext(
 const cl_context_properties *properties,
@@ -84,13 +84,13 @@ cl_int *errcode_ret)
 }
 
 /*!
- * @brief Create an OpenCL context from a device type that identifies the specific device(s) to use.
- * @param properties Specifies a list of context property names and their corresponding values. Each property name is immediately followed by the corresponding desired value. The list is terminated with 0. properties can be NULL in which case the platform that is selected is implementation-defined. 
- * @param device_type The number of devices specified in the devices argument.
- * @param pfn_notify A callback function that can be registered by the application. This callback function will be used by the OpenCL implementation to report information on errors that occur in this context. 
- * @param user_data Passed as the user_data argument when pfn_notify is called. user_data can be NULL.
- * @param errcode_ret Returns an appropriate error code. If errcode_ret is NULL, no error code is returned.
- */
+* @brief Create an OpenCL context from a device type that identifies the specific device(s) to use.
+* @param properties Specifies a list of context property names and their corresponding values. Each property name is immediately followed by the corresponding desired value. The list is terminated with 0. properties can be NULL in which case the platform that is selected is implementation-defined. 
+* @param device_type The number of devices specified in the devices argument.
+* @param pfn_notify A callback function that can be registered by the application. This callback function will be used by the OpenCL implementation to report information on errors that occur in this context. 
+* @param user_data Passed as the user_data argument when pfn_notify is called. user_data can be NULL.
+* @param errcode_ret Returns an appropriate error code. If errcode_ret is NULL, no error code is returned.
+*/
 cl_context clCreateContextFromType(
 const cl_context_properties *properties,
 cl_device_type device_type,

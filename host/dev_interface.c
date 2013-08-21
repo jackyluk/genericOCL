@@ -111,16 +111,16 @@ ssize_t dev_write(int fd, void* buffer, size_t len){
 
 
 int dev_set_kernel_args(char* arglist){
-    FILE *file;
+    FILE *argfile;
     int count;
 
     DEBUG("DEVICE: dev_set_kernel_args\n");
  
-    file = fopen("kernelargs","w+");
-    if(file == NULL)
+    argfile = fopen("kernelargs","w+");
+    if(argfile == NULL)
         return -1;
-    count = fprintf(file,"%s",arglist);
-    fclose(file);
+    count = fprintf(argfile,"%s",arglist);
+    fclose(argfile);
     if(count < 0)
         return -1;
 

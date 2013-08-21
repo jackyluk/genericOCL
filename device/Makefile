@@ -1,4 +1,4 @@
-CFLAGS= -g -DSHOWDEBUG -I../
+CFLAGS= -g -I../
 CC = gcc
 ALL = device
 
@@ -25,4 +25,4 @@ device: $(DEVICE_OBJS)
 	g++ -c $(CFLAGS) $< $(LDFLAGS) -o $@	
 
 clean:
-	rm *.o kernel.so $(ALL) 
+	rm -f *.o kernel.so $(ALL) 

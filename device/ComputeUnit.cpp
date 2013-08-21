@@ -4,6 +4,7 @@
  *****************************************************************************/
 
 #include "ComputeUnit.hpp"
+#include "debug.h"
 
 /*!****************************************************************************
  * @brief Compute Unit constructor
@@ -15,7 +16,7 @@ ComputeUnit::ComputeUnit(IScheduler *parent, int designation,
                          char *dataPtr){
     this->data = dataPtr;
     this->parent = parent;
-    this->thread = NULL;
+    this->thread = 0;
     this->designation = designation;
     this->dlHandle = NULL;
 }
@@ -35,13 +36,13 @@ void ComputeUnit::set_kernel(char *lib_name){
     //fprintf(stderr, "Opening %s\n", lib_name);
     this->dlHandle = dlopen(lib_name, RTLD_NOW);
     if (!this->dlHandle) {
-        fprintf(stderr, "%s\n", dlerror());
+        DEBUG("%s\n", dlerror());
         exit(EXIT_FAILURE);
     }
     this->pfnKernelWrapper = (void (*)(int, int, int, void *))dlsym(this->dlHandle, "kernel_wrapper");
     dlerror(); /* clear previous error */
     if ((error = dlerror()) != NULL)  {
-        fprintf(stderr, "%s\n", error);
+        DEBUG("%s\n", dlerror());
         exit(EXIT_FAILURE);
     }
 }
@@ -59,12 +60,12 @@ void ComputeUnit::run_kernel(int z, int y, int x){
     this->globalZ = z;
 
     //Start the thread
-    fprintf(stderr, "Calling Designation %d, Instance %d:%d:%d\n", this->designation, z, y, x);
-    if(thread){
-        pthread_join(thread, NULL);
-        thread = NULL;
+    DEBUG("Calling Designation %d, Instance %d:%d:%d\n", this->designation, z, y, x);
+    if(this->thread){
+        pthread_join(this->thread, NULL);
+        this->thread = 0;
     }
-    pthread_create(&thread, NULL, cu_thread_start, this);
+    pthread_create(&(this->thread), NULL, cu_thread_start, this);
 }
 
 /*!****************************************************************************
@@ -82,8 +83,18 @@ void* ComputeUnit::cu_thread(){
   this->pfnKernelWrapper(this->globalX, this->globalY, this->globalZ, this->data);
   dlclose(this->dlHandle);
   this->dlHandle = NULL;
-  fprintf(stderr, "%d %d:%d:%d EXD\n", this->designation, this->globalZ, this->globalY, this->globalX);
+  DEBUG("%d %d:%d:%d EXD\n", this->designation, this->globalZ, this->globalY, this->globalX);
   this->parent->CUDone(this);
+}
+
+/*!****************************************************************************
+ * @brief Compute Unit Join
+ *****************************************************************************/
+void ComputeUnit::join(){
+    if(this->thread){
+        pthread_join(this->thread, NULL);
+        this->thread = 0;
+    }
 }
 
 /*!****************************************************************************

@@ -5,6 +5,7 @@
 #include "IScheduler.hpp"
 #include "TPScheduler.hpp"
 #include "ComputeUnit.hpp"
+#include "debug.h"
 
 IScheduler::IScheduler(){}
 IScheduler::~IScheduler(){}
@@ -33,6 +34,7 @@ void TPScheduler::addWork(int globalWS[3]){
     int y;
     int z;
     int counter;
+    ComputeUnit *tmp;
     
     for(z = 0; z < globalWS[2]; z++){
         for(y = 0; y < globalWS[1]; y++){
@@ -43,29 +45,37 @@ void TPScheduler::addWork(int globalWS[3]){
                         ComputeUnit *free_cu = this->free_cu_array.front();
                         this->free_cu_array.pop();
                         pthread_mutex_unlock(&(this->queue_mx));
-                        free_cu->set_kernel("./kernel.so");
+                        free_cu->set_kernel((char *)"./kernel.so");
                         free_cu->run_kernel(z, y, x);
                         break;
                     }else{
+                        while(false == this->done_cu_array.empty()){
+                            tmp = this->done_cu_array.front();
+                            this->done_cu_array.pop();
+                            tmp->join();
+                            this->free_cu_array.push(tmp);
+                        }
                         pthread_mutex_unlock(&(this->queue_mx));
                     }
                 }
             }
         }
     }
-    while(1){
-      pthread_mutex_lock(&(this->queue_mx));
-      if(COMPUTE_UNIT_ARRAY_SIZE == this->free_cu_array.size()){
-        pthread_mutex_unlock(&(this->queue_mx));
-        break;
-      }
-      pthread_mutex_unlock(&(this->queue_mx));
+    
+    //Finally ensure all threads are joined.
+    pthread_mutex_lock(&(this->queue_mx));
+    while(false == this->done_cu_array.empty()){
+        tmp = this->done_cu_array.front();
+        this->done_cu_array.pop();
+        tmp->join();
+        this->free_cu_array.push(tmp);
     }
+    pthread_mutex_unlock(&(this->queue_mx));
 }
 
 void TPScheduler::CUDone(ComputeUnit *free_cu){
     pthread_mutex_lock(&(queue_mx));
-    this->free_cu_array.push(free_cu);
+    this->done_cu_array.push(free_cu);
     pthread_mutex_unlock(&(this->queue_mx));
 }
 

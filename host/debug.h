@@ -1,13 +1,14 @@
 #ifndef DEBUG_H
-
-
-#ifdef SHOWDEBUG
 #include <stdio.h>
-#define DEBUG printf
+#include <stdarg.h>
+
+extern void logToFile(const char *fmt, ...);
+#ifdef SHOWDEBUG
+#define DEBUG(...) logToFile(__VA_ARGS__)
 #endif
 
 #ifndef DEBUG
-#define DEBUG (void) 
+#define DEBUG(...)  
 #endif
 
 #endif /* DEBUG_H */

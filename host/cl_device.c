@@ -1,7 +1,7 @@
 /*!****************************************************************************
- * @file cl_device.c OpenCL device implementation
- * @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
- *****************************************************************************/
+* @file cl_device.c OpenCL device implementation
+* @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
+*****************************************************************************/
 #include "debug.h"
 #include <CL/opencl.h>
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 #include <string.h>
 #include "cl_defs.h"
 
-
+static char *clDeviceExtensions = "";
 
 
 cl_int clGetDeviceIDs(
@@ -46,9 +46,11 @@ cl_uint *num_devices)
         if((fpga = (cl_device_id)malloc(sizeof(struct _cl_device_id))) == NULL)
             return CL_OUT_OF_HOST_MEMORY;
         fpga->type = DV_TYPE;
-        fpga->vendor = DV_VENDOR;
-        fpga->name = DV_NAME;
+        fpga->vendor = strdup(DV_VENDOR);
+        fpga->name = strdup(DV_NAME);
+        fpga->version = strdup(DV_VERSION);
         fpga->connected = CL_FALSE;
+        fpga->preferred_vector_width_char = PREFERRED_VECTOR_WIDTH_CHAR;
         devices[0] = fpga;
     }
     
@@ -86,6 +88,13 @@ size_t *param_value_size_ret)
             param = device->vendor;
             param_size = strlen(param)+1;
             break;
+            
+        case CL_DEVICE_VERSION:
+            DEBUG("%s: Device Version \n", __func__);
+            param = device->vendor;
+            param_size = strlen(param)+1;
+            break;
+        
         
         case CL_DEVICE_NAME:
             DEBUG("%s: Device name \n", __func__);
@@ -126,6 +135,31 @@ size_t *param_value_size_ret)
             *(size_t *)param_value = MAX_WORK_GROUP_SIZE;
             if(param_value_size_ret) *param_value_size_ret = sizeof(size_t);
             return CL_SUCCESS;
+            break;
+            
+        case CL_DEVICE_EXTENSIONS:
+            DEBUG("%s: Device Extensions \n", __func__);
+            *(size_t *)param_value = sizeof(clDeviceExtensions);
+            if(param_value_size_ret) *param_value_size_ret = clDeviceExtensions;
+            return CL_SUCCESS;
+            break;
+            
+        case CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR:
+            DEBUG("%s: Device Preferred Vector Width Int\n", __func__);
+            param_size = sizeof(cl_uint);
+            *(cl_uint *)param = device->preferred_vector_width_char;
+            break;
+            
+        case CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT:
+            DEBUG("%s: Device Preferred Vector Width Int\n", __func__);
+            param_size = sizeof(cl_uint);
+            *(cl_uint *)param = device->preferred_vector_width_char/sizeof(cl_short);
+            break;
+            
+        case CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT:
+            DEBUG("%s: Device Preferred Vector Width Int\n", __func__);
+            param_size = sizeof(cl_uint);
+            *(cl_uint *)param = device->preferred_vector_width_char/sizeof(cl_int);
             break;
             
         default:

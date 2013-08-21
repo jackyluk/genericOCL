@@ -1,7 +1,7 @@
 /*!****************************************************************************
- * @file cl_kernel.c OpenCL kernel implementation
- * @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
- *****************************************************************************/
+* @file cl_kernel.c OpenCL kernel implementation
+* @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
+*****************************************************************************/
 #include "debug.h"
 #include <CL/opencl.h>
 #include <stdlib.h>
@@ -42,6 +42,7 @@ cl_int *errcode_ret)
     }
     kernel->refcount = 1; /* implicit retain */
     kernel->arg_count = 0;
+    kernel->isNew = CL_TRUE;
     strncpy(name, kernel_name, name_len);
     kernel->func_name = name;
 
@@ -94,7 +95,10 @@ const void *arg_value)
         return CL_INVALID_KERNEL;
 
     kernel->args[arg_index] = arg_size;
-    kernel->arg_count++;
+    if((arg_index + 1) > kernel->arg_count){
+        kernel->arg_count = arg_index + 1;
+    }
+    DEBUG("clSetKernelArg arg_count %d)\n", kernel->arg_count);
 
     return CL_SUCCESS;
 }
@@ -104,7 +108,7 @@ const void *arg_value)
 char* get_kernel_args(cl_kernel kernel){
     int i, count;
     int total = 0;
-    char arg_line[16];
+    char arg_line[1024];
     char* arg_str;
 
     if( (arg_str = (char*)malloc(sizeof(char)*512)) == NULL){
@@ -160,7 +164,7 @@ cl_event *event)
     newCmd->ret = NULL;
     
     /*! Use the payload area of the command object for parameters*/
-    ND_Kernel_Cmd_Params *params = payload;
+    ND_Kernel_Cmd_Params *params = (ND_Kernel_Cmd_Params *)payload;
     params->globalWorkSize.globalX = global_work_size[0];
     params->globalWorkSize.globalY = (work_dim >=2) ? global_work_size[1] : 1;
     params->globalWorkSize.globalZ = (work_dim >=3) ? global_work_size[2] : 1;

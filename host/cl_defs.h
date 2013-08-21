@@ -1,7 +1,7 @@
 /*!****************************************************************************
- * @file cl_defs.c OpenCL definitions
- * @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
- *****************************************************************************/
+* @file cl_defs.c OpenCL definitions
+* @author Jacky H T Luk 2013, Modified from Marcin Bujar's version
+*****************************************************************************/
 #ifndef CL_DEFS_H
 #define CL_DEFS_H
 
@@ -25,7 +25,10 @@ extern struct _cl_platform_id platformID_0;
 #define DV_TYPE CL_DEVICE_TYPE_ACCELERATOR
 #define DV_VENDOR "None"
 #define DV_NAME "Mora array"
-#define PREFERRED_WORK_GROUP_SIZE 64 //Some number.
+#define DV_VERSION "OpenCL 1.1 Novel"
+#define PREFERRED_WORK_GROUP_SIZE 1 //Some number.
+
+#define PREFERRED_VECTOR_WIDTH_CHAR 256 //some number.
 
 #define MAX_MEM_ALLOC_SIZE 4*1024 //Some number.
 
@@ -57,8 +60,11 @@ struct _cl_platform_id{
 struct _cl_device_id{
     cl_device_type type;
     char *vendor;
+    char *version;
     char *name; 
     cl_bool connected;
+    cl_bool hasKernel;
+    cl_uint preferred_vector_width_char;
     int fd_ctrl;
 };
 
@@ -108,9 +114,10 @@ struct _cl_kernel{
     cl_uint refcount;
     char* lib_name;
     char* func_name;
-    size_t args[32];
-    void* argv[32];
+    size_t args[64];
+    void* argv[64];
     unsigned int arg_count;
+    cl_bool isNew;
 };
 
 struct _cl_source{
@@ -124,6 +131,10 @@ struct _cl_program{
     cl_uint refcount;
     cl_context context;
     struct _cl_source source;
+    cl_build_status buildStatus;
+    char* buildOptions;
+    size_t buildOptionsLen;
+    size_t binarySize;
     cl_bool createdWithBinary;
     cl_bool hasBinary;
 };
@@ -141,7 +152,13 @@ typedef struct ND_Kernel_Cmd_Params_t {
 } ND_Kernel_Cmd_Params;
 
 void queue_dispatchCommand(cl_command_queue command_queue, QueueCommand *command);
-void dispatchNDRangeKernel(int fd, QueueCommand *command);
+void dispatchNDRangeKernel(cl_device_id device, QueueCommand *command);
+int setGlobalWorkSize(int fd, int globalX, int globalY, int globalZ);
+int setKernelArguments(cl_kernel kernel);
+int compileKernel(char * func_name, int globalX, int globalY, int globalZ);
+int transferKernel(int fd);
+int sendExecuteKernel(int fd);
+
 char* get_kernel_args(cl_kernel kernel);
 QueueCommand* queue_add(cl_command_queue command_queue);
 QueueCommand* queue_head(cl_command_queue command_queue);

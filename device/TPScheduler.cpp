@@ -63,14 +63,27 @@ void TPScheduler::addWork(int globalWS[3]){
     }
     
     //Finally ensure all threads are joined.
-    pthread_mutex_lock(&(this->queue_mx));
-    while(false == this->done_cu_array.empty()){
-        tmp = this->done_cu_array.front();
-        this->done_cu_array.pop();
-        tmp->join();
-        this->free_cu_array.push(tmp);
+    while(1){
+        pthread_mutex_lock(&(this->queue_mx));
+        if(this->free_cu_array.size() + this->done_cu_array.size() != COMPUTE_UNIT_ARRAY_SIZE){
+            usleep(10);
+            pthread_mutex_unlock(&(this->queue_mx));
+        }else{
+            while(false == this->done_cu_array.empty()){
+                tmp = this->done_cu_array.front();
+                this->done_cu_array.pop();
+                tmp->join();
+                this->free_cu_array.push(tmp);
+            }
+            pthread_mutex_unlock(&(this->queue_mx));
+            break;
+        }
     }
-    pthread_mutex_unlock(&(this->queue_mx));
+
+    for(x = 0; x < 128; x++){
+        DEBUG("%d ", ((int *)(this->data))[x]);
+    }
+    DEBUG("\n");
 }
 
 void TPScheduler::CUDone(ComputeUnit *free_cu){

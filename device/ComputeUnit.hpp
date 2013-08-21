@@ -22,6 +22,7 @@ class ComputeUnit{
     void* dlHandle;
     IScheduler *parent; 
     pthread_t thread;
+    bool threadAllocated;
     pfnKernelWrapper_t pfnKernelWrapper;
     
 private:

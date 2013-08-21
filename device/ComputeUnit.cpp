@@ -17,6 +17,7 @@ ComputeUnit::ComputeUnit(IScheduler *parent, int designation,
     this->data = dataPtr;
     this->parent = parent;
     this->thread = 0;
+    this->threadAllocated = false;
     this->designation = designation;
     this->dlHandle = NULL;
 }
@@ -61,10 +62,8 @@ void ComputeUnit::run_kernel(int z, int y, int x){
 
     //Start the thread
     DEBUG("Calling Designation %d, Instance %d:%d:%d\n", this->designation, z, y, x);
-    if(this->thread){
-        pthread_join(this->thread, NULL);
-        this->thread = 0;
-    }
+    this->join();
+    this->threadAllocated = true;
     pthread_create(&(this->thread), NULL, cu_thread_start, this);
 }
 
@@ -91,9 +90,9 @@ void* ComputeUnit::cu_thread(){
  * @brief Compute Unit Join
  *****************************************************************************/
 void ComputeUnit::join(){
-    if(this->thread){
+    if(this->threadAllocated == true){
         pthread_join(this->thread, NULL);
-        this->thread = 0;
+        this->threadAllocated = false;
     }
 }
 

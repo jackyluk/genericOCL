@@ -1,0 +1,24 @@
+ARCH = $(shell getconf LONG_BIT)
+ARCHPATH_32 = x86
+ARCHPATH_64 = x86_64
+ARCHPATH = $(ARCHPATH_$(ARCH))
+HOSTPATH = ../../host/build
+HOSTPATH_INCLUDE = $(HOSTPATH)/include
+HOSTPATH_LIB = $(HOSTPATH)/lib/$(ARCHPATH)
+
+CFLAGS = -W -Wall -g -I$(HOSTPATH_INCLUDE)
+CXXFLAGS = -W -Wall -g -I$(HOSTPATH_INCLUDE)
+CC = gcc
+ALL = matrix
+
+all: $(ALL)
+
+
+matrix: matrix.o
+	g++ -L$(HOSTPATH_LIB) -o $@ $< -lOpenCL
+
+%.o: %.cc
+	g++ $(CXXFLAGS) -c -L$(HOSTPATH_LIB) -o $@ $<
+
+clean:
+	@rm -f *.o matrix 

@@ -207,7 +207,8 @@ void *user_data)
     if (srcFile != NULL){
         int line;
         for(line = 0; line < program->source.count; line++){
-            fwrite(program->source.strings[line], program->source.lengths[line], 1, srcFile);
+            DEBUG("%s: Line length %d\n", __func__, program->source.lengths[line]);
+            fwrite(program->source.strings[line], program->source.lengths[line] - 1, 1, srcFile);
         }
         fclose(srcFile);
         

@@ -42,8 +42,8 @@ $(LIBPATH)/libOpenCL.so: dev_interface.o $(OCL_OBJ) build/include build/scripts 
 	@echo ""
 	@echo ""
 	@echo "Please export environment variables:"
-	@echo "export NOVELCLSDKROOT=$(CURDIR)/"
-	@export NOVELCLSDKROOT=$(CURDIR)/
+	@echo "export NOVELCLSDKROOT=$(CURDIR)/build"
+	@export NOVELCLSDKROOT=$(CURDIR)/build
 	@echo "export LD_LIBRARY_PATH=$$()LD_LIBRARY_PATH:$(CURDIR)/$(LIBPATH)"
 	@export LD_LIBRARY_PATH=$$()LD_LIBRARY_PATH:$(CURDIR)/$(LIBPATH)
 

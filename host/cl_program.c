@@ -27,6 +27,7 @@ cl_int *errcode_ret)
         if(errcode_ret) *errcode_ret = CL_OUT_OF_HOST_MEMORY;
         return NULL;
     }
+    prog->context = context;
     prog->refcount = 1; /* implicit retain */
     prog->buildStatus = CL_BUILD_NONE;
     prog->buildOptions = NULL;
@@ -95,6 +96,7 @@ cl_program clCreateProgramWithBinary (  cl_context context,
         if(errcode_ret) *errcode_ret = CL_OUT_OF_HOST_MEMORY;
         return NULL;
     }
+    prog->context = context;
     prog->refcount = 1; /* implicit retain */
     prog->buildStatus = CL_BUILD_NONE;
     prog->buildOptions = NULL;
@@ -256,11 +258,12 @@ cl_int clGetProgramInfo (cl_program program,
             return CL_SUCCESS;
             
         case CL_PROGRAM_CONTEXT:
+            
             param_value = (void *)program->context;
             return CL_SUCCESS;
             
         case CL_PROGRAM_NUM_DEVICES:
-            param_value = (void *)program->context->num_devices;
+            *(cl_uint *)param_value = program->context->num_devices;
             return CL_SUCCESS;
             
         case CL_PROGRAM_DEVICES:

@@ -36,6 +36,13 @@ void TPScheduler::addWork(int globalWS[3]){
     int counter;
     ComputeUnit *tmp;
     
+    for(counter = 0; counter < COMPUTE_UNIT_ARRAY_SIZE; counter++){
+        tmp = this->free_cu_array.front();
+        this->free_cu_array.pop();
+        tmp->set_kernel((char *)"./kernel.so");
+        this->free_cu_array.push(tmp);
+    }
+    
     for(z = 0; z < globalWS[2]; z++){
         for(y = 0; y < globalWS[1]; y++){
             for(x = 0; x < globalWS[0]; x++){
@@ -45,7 +52,6 @@ void TPScheduler::addWork(int globalWS[3]){
                         ComputeUnit *free_cu = this->free_cu_array.front();
                         this->free_cu_array.pop();
                         pthread_mutex_unlock(&(this->queue_mx));
-                        free_cu->set_kernel((char *)"./kernel.so");
                         free_cu->run_kernel(z, y, x);
                         break;
                     }else{
@@ -78,6 +84,13 @@ void TPScheduler::addWork(int globalWS[3]){
             pthread_mutex_unlock(&(this->queue_mx));
             break;
         }
+    }
+    
+    for(counter = 0; counter < COMPUTE_UNIT_ARRAY_SIZE; counter++){
+        tmp = this->free_cu_array.front();
+        this->free_cu_array.pop();
+        tmp->unset_kernel();
+        this->free_cu_array.push(tmp);
     }
 
     for(x = 0; x < 128; x++){

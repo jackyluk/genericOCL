@@ -33,6 +33,7 @@ public:
     ComputeUnit(IScheduler *parent, int designation, char *dataPtr);
     ~ComputeUnit();
     void set_kernel(char *lib_name);
+    void unset_kernel(void);
     void run_kernel(int x, int y, int z);
     void join();
 };

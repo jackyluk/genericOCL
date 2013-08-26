@@ -31,13 +31,22 @@ void ComputeUnit::set_kernel(char *lib_name){
     
     if(this->dlHandle){
       dlclose(this->dlHandle);
+        error = dlerror();
+        if (error) {
+            DEBUG("%s\n", error);
+            exit(EXIT_FAILURE);
+        }
+      DEBUG("Closing handle for %d\n", this->designation);
+      this->pfnKernelWrapper = NULL;
       this->dlHandle = NULL;
     }
+    
     /* link with kernel compiled as shared library */
     //fprintf(stderr, "Opening %s\n", lib_name);
-    this->dlHandle = dlopen(lib_name, RTLD_NOW);
-    if (!this->dlHandle) {
-        DEBUG("%s\n", dlerror());
+    this->dlHandle = dlopen( lib_name, RTLD_NOW);
+    error = dlerror();
+    if (error) {
+        DEBUG("%s\n", error);
         exit(EXIT_FAILURE);
     }
     this->pfnKernelWrapper = (void (*)(int, int, int, void *))dlsym(this->dlHandle, "kernel_wrapper");
@@ -47,6 +56,26 @@ void ComputeUnit::set_kernel(char *lib_name){
         exit(EXIT_FAILURE);
     }
 }
+
+/*!****************************************************************************
+ * @brief Unset kernel 
+ *****************************************************************************/
+void ComputeUnit::unset_kernel(){
+    char* error;
+    
+    if(this->dlHandle){
+      dlclose(this->dlHandle);
+        error = dlerror();
+        if (error) {
+            DEBUG("%s\n", error);
+            exit(EXIT_FAILURE);
+        }
+      DEBUG("Closing handle for %d\n", this->designation);
+      this->pfnKernelWrapper = NULL;
+      this->dlHandle = NULL;
+    }
+}
+
 
 /*!****************************************************************************
  * @brief Start kernel execution
@@ -80,8 +109,8 @@ void *ComputeUnit::cu_thread_start(void *arg){
  *****************************************************************************/
 void* ComputeUnit::cu_thread(){
   this->pfnKernelWrapper(this->globalX, this->globalY, this->globalZ, this->data);
-  dlclose(this->dlHandle);
-  this->dlHandle = NULL;
+//   dlclose(this->dlHandle);
+//   this->dlHandle = NULL;
   DEBUG("%d %d:%d:%d EXD\n", this->designation, this->globalZ, this->globalY, this->globalX);
   this->parent->CUDone(this);
 }

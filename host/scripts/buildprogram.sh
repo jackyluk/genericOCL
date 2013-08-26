@@ -19,7 +19,7 @@ then
     else
         source tmp.options
         ( echo -e "#include \"kernel.h\""; cat ${src} ) > ${src}.tmp #append header to source
-        gcc -I$NOVELCLSDKROOT\include -fPIC -Wno-implicit-function-declaration ${CLFLAGS} -g -x c -std=c99 -c -o ${target} ${src}.tmp
+        gcc -I$NOVELCLSDKROOT/include -fPIC -Wno-implicit-function-declaration ${CLFLAGS} -g -x c -std=c99 -c -o ${target} ${src}.tmp
         mv ${target} program.o
         exit 0
     fi

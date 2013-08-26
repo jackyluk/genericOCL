@@ -146,20 +146,23 @@ size_t *param_value_size_ret)
             
         case CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR:
             DEBUG("%s: Device Preferred Vector Width Int\n", __func__);
-            param_size = sizeof(cl_uint);
-            *(cl_uint *)param = device->preferred_vector_width_char;
+            if(param_value_size_ret) *param_value_size_ret = sizeof(cl_uint);
+            *(cl_uint *)param_value = device->preferred_vector_width_char;
+            return CL_SUCCESS;
             break;
             
         case CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT:
             DEBUG("%s: Device Preferred Vector Width Int\n", __func__);
-            param_size = sizeof(cl_uint);
-            *(cl_uint *)param = device->preferred_vector_width_char/sizeof(cl_short);
+            if(param_value_size_ret) *param_value_size_ret = sizeof(cl_uint);
+            *(cl_uint *)param_value = device->preferred_vector_width_char/sizeof(cl_short);
+            return CL_SUCCESS;
             break;
             
         case CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT:
             DEBUG("%s: Device Preferred Vector Width Int\n", __func__);
-            param_size = sizeof(cl_uint);
-            *(cl_uint *)param = device->preferred_vector_width_char/sizeof(cl_int);
+            if(param_value_size_ret) *param_value_size_ret = sizeof(cl_uint);
+            *(cl_uint *)param_value = device->preferred_vector_width_char/sizeof(cl_int);
+            return CL_SUCCESS;
             break;
             
         default:

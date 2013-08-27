@@ -3,7 +3,7 @@
  A Generic OpenCL Implementation to Support Novel Architectures
 
  Author: Hau Tat Luk
- Date: 13 May 2012
+ Date: 30 August 2013
 
  Supervisor: Wim Vanderbauwhede
 
@@ -15,32 +15,60 @@
 
  device/           | device application
 
- intel/MonteCarlo  | Intel Monte Carlo simulation for the European stock option pricing
+ deviceProxy/      | TCP proxy program (optional)
+
+ demos/addition    | Addition example
+
+ demos/helloworld  | Hello world example
+
+ demos/matrix      | Matrix multiplication example
+
+ demos/cgminer     | Cgminer bitcoin miner
 
 -----------------------------------------------
 
  INSTRUCTIONS
 
  The included Makefile in the top level folder
- should be used to build all the necessary
- executables:
+ should be used to build the device simulator, the host runtime, 
+ the demo programs (except for cgminer):
 
  $ make
  
- To install the OpenCL library to /usr/lib:
- $ cd host
- $ sudo make install
+ At the end of the host runtime build, the build system will suggest
+ the correct value to set environment variable NOVELCLSDKROOT to.
+ The host is built into host/build. This is where NOVELCLSDKROOT needs
+ to point, in absolute path.
+ Export the variable before building Cgminer.
+
+ To build cgminer, first go into the demos/cgminer.
+
+ $ cd demos/cgminer
+
+ Then run autogen.sh to configure the build system. 
+
+ $ ./autogen.sh
+
+ Once the configuration is complete, run make to build cgminer
+
+ $ make
+
 
  Before running any applications, please start the device application, on port 5000.
 
  $ cd device
  $ ./device 5000
  
- Then run application by:
- $ cd ..
- $ ./run_host.sh helloworld
+ The examples helloworld, addition, and matrix, can be run by just executing the corresponding binaries.
 
- Replace helloworld with sample application of your choice, the others beint addition and matrix
+
+ To run the cgminer bitcoin miner example, you will need an account on a bitcoin mining pool,
+ I have used 50btc.com here with an anonymous bitcoin address creditial. 
+
+ $ cd demos/cgminer 
+ $ ./cgminer -o http://pool.50btc.com:8332 -O1ALKUbzt6n4LdTANtqXwVeQeUbZk3akXUF:x -v1 -I0
+
+
  
  DEPENDENCIES:
 
@@ -50,19 +78,8 @@
  NOTE: Please make sure that the PYTHON macro
        in host/cl_defs.h is set correctly to
        the python 2.x binary present on your
-       machine.
-
- Intel Monte Carlo simulation for the European stock option pricing
- 
- The Makefile has been modified to compile with this OpenCL host implementation instead of Intel's.
- To compile:
- $ make -C intel/MonteCarlo
-
- To run: 
- Make sure device is running, then run:
- $ intel/MonteCarlo/montecarlo -o 128
- 
- 128 is the number of options to. 
+       machine. This is used by the host runtime 
+       when invoking kernel build scripts
 
 
  Tested on a Linux machine.

@@ -18,6 +18,7 @@ typedef void (*pfnKernelWrapper_t)(int x, int y, int z, void* mem);
 class ComputeUnit{
     char *data;
     pthread_mutex_t cuState_mx;
+    pthread_cond_t cuState_cond;
     int globalX, globalY, globalZ;
     void* dlHandle;
     IScheduler *parent; 

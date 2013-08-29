@@ -20,6 +20,11 @@ ComputeUnit::ComputeUnit(IScheduler *parent, int designation,
     this->threadAllocated = false;
     this->designation = designation;
     this->dlHandle = NULL;
+#if defined(ENABLE_THREAD_POOL)
+    pthread_mutex_init(&(this->cuState_mx), NULL);
+    pthread_cond_init(&(this->cuState_cond), NULL);
+    pthread_create(&(this->thread), NULL, cu_thread_start, this);
+#endif
 }
 
 /*!****************************************************************************
@@ -91,9 +96,16 @@ void ComputeUnit::run_kernel(int z, int y, int x){
 
     //Start the thread
     DEBUG("Calling Designation %d, Instance %d:%d:%d\n", this->designation, z, y, x);
+#if !defined(ENABLE_THREAD_POOL)
     this->join();
     this->threadAllocated = true;
     pthread_create(&(this->thread), NULL, cu_thread_start, this);
+#else
+    pthread_mutex_lock(&(this->cuState_mx));
+    this->threadAllocated = true;
+    pthread_cond_signal(&(this->cuState_cond));
+    pthread_mutex_unlock(&(this->cuState_mx));
+#endif
 }
 
 /*!****************************************************************************
@@ -108,21 +120,35 @@ void *ComputeUnit::cu_thread_start(void *arg){
  * @brief CU Thread
  *****************************************************************************/
 void* ComputeUnit::cu_thread(){
+#if defined(ENABLE_THREAD_POOL)
+  while(1){
+    pthread_mutex_lock(&(this->cuState_mx));
+    while(this->threadAllocated == false){
+        pthread_cond_wait(&(this->cuState_cond), &(this->cuState_mx));
+    }
+    pthread_mutex_unlock(&(this->cuState_mx));
+    this->pfnKernelWrapper(this->globalX, this->globalY, this->globalZ, this->data);
+    this->threadAllocated = false;
+    DEBUG("%d %d:%d:%d EXD\n", this->designation, this->globalZ, this->globalY, this->globalX);
+    this->parent->CUDone(this);
+  }
+#else
   this->pfnKernelWrapper(this->globalX, this->globalY, this->globalZ, this->data);
-//   dlclose(this->dlHandle);
-//   this->dlHandle = NULL;
   DEBUG("%d %d:%d:%d EXD\n", this->designation, this->globalZ, this->globalY, this->globalX);
   this->parent->CUDone(this);
+#endif
 }
 
 /*!****************************************************************************
  * @brief Compute Unit Join
  *****************************************************************************/
 void ComputeUnit::join(){
+#if !defined(ENABLE_THREAD_POOL)
     if(this->threadAllocated == true){
         pthread_join(this->thread, NULL);
         this->threadAllocated = false;
     }
+#endif
 }
 
 /*!****************************************************************************

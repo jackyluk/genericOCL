@@ -55,12 +55,14 @@ void TPScheduler::addWork(int globalWS[3]){
                         free_cu->run_kernel(z, y, x);
                         break;
                     }else{
+#if !defined(ENABLE_THREAD_POOL)
                         while(false == this->done_cu_array.empty()){
                             tmp = this->done_cu_array.front();
                             this->done_cu_array.pop();
                             tmp->join();
                             this->free_cu_array.push(tmp);
                         }
+#endif
                         pthread_mutex_unlock(&(this->queue_mx));
                     }
                 }
@@ -71,16 +73,22 @@ void TPScheduler::addWork(int globalWS[3]){
     //Finally ensure all threads are joined.
     while(1){
         pthread_mutex_lock(&(this->queue_mx));
+#if defined(ENABLE_THREAD_POOL)
+        if(this->free_cu_array.size() != COMPUTE_UNIT_ARRAY_SIZE){
+#else
         if(this->free_cu_array.size() + this->done_cu_array.size() != COMPUTE_UNIT_ARRAY_SIZE){
+#endif
             usleep(10);
             pthread_mutex_unlock(&(this->queue_mx));
         }else{
+#if !defined(ENABLE_THREAD_POOL)
             while(false == this->done_cu_array.empty()){
                 tmp = this->done_cu_array.front();
                 this->done_cu_array.pop();
                 tmp->join();
                 this->free_cu_array.push(tmp);
             }
+#endif
             pthread_mutex_unlock(&(this->queue_mx));
             break;
         }
@@ -101,7 +109,11 @@ void TPScheduler::addWork(int globalWS[3]){
 
 void TPScheduler::CUDone(ComputeUnit *free_cu){
     pthread_mutex_lock(&(queue_mx));
+#if defined(ENABLE_THREAD_POOL)
+    this->free_cu_array.push(free_cu);
+#else
     this->done_cu_array.push(free_cu);
+#endif
     pthread_mutex_unlock(&(this->queue_mx));
 }
 

@@ -1,4 +1,4 @@
-CFLAGS= -g -I../
+CFLAGS= -g -I../ -O2
 CC = gcc
 ALL = device
 

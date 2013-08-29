@@ -1,4 +1,4 @@
-CFLAGS= -g -I../ -O2
+CFLAGS= -g -I../ -O2 -DENABLE_THREAD_POOL
 CC = gcc
 ALL = device
 
